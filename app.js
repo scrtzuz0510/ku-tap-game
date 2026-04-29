@@ -302,6 +302,15 @@ const game = {
 
   /* ── 초기화 ── */
   init() {
+    if (!api.isLoggedIn()) {
+      this._showAuthModal();
+      return;
+    }
+    this._initAfterAuth();
+  },
+
+  /* ── 로그인 후 게임 초기화 ── */
+  _initAfterAuth() {
     this.profiles = this._loadProfiles();
     this._renderInitProfileList();
 
@@ -361,12 +370,136 @@ const game = {
       btn.addEventListener('click', () => this._closeModal(btn.dataset.modal));
     });
 
-    // 자동으로 마지막 프로필 로드 (선택 사항: 저장된 프로필이 있으면 선택 화면 표시)
-    if (this.profiles.length === 0) {
-      // 아무 프로필 없으면 입력만 보임
-    } else {
+    if (this.profiles.length > 0) {
       document.getElementById('saved-profiles-section').classList.remove('hidden');
     }
+
+    // DB에서 프로필 목록 동기화 (다른 기기에서 저장된 세이브 복원)
+    this._syncProfilesFromDB();
+  },
+
+  /* ── auth 모달 표시 ── */
+  _showAuthModal() {
+    document.getElementById('modal-auth').classList.remove('hidden');
+
+    const tabLogin  = document.getElementById('auth-tab-login');
+    const tabSignup = document.getElementById('auth-tab-signup');
+    const formLogin  = document.getElementById('auth-form-login');
+    const formSignup = document.getElementById('auth-form-signup');
+
+    tabLogin.addEventListener('click', () => {
+      tabLogin.classList.add('active');  tabSignup.classList.remove('active');
+      formLogin.classList.remove('hidden'); formSignup.classList.add('hidden');
+      document.getElementById('auth-error-login').textContent = '';
+    });
+    tabSignup.addEventListener('click', () => {
+      tabSignup.classList.add('active'); tabLogin.classList.remove('active');
+      formSignup.classList.remove('hidden'); formLogin.classList.add('hidden');
+      document.getElementById('auth-error-signup').textContent = '';
+    });
+
+    const setLoading = (btn, loading) => {
+      btn.disabled = loading;
+      btn.textContent = loading ? '처리 중...' : (btn.id === 'btn-auth-login' ? '로그인' : '회원가입');
+    };
+
+    document.getElementById('btn-auth-login').addEventListener('click', async () => {
+      const btn      = document.getElementById('btn-auth-login');
+      const username = document.getElementById('auth-username-login').value.trim();
+      const password = document.getElementById('auth-password-login').value;
+      const errEl    = document.getElementById('auth-error-login');
+      errEl.textContent = '';
+      if (!username || !password) { errEl.textContent = '유저네임과 비밀번호를 입력해주세요'; return; }
+      setLoading(btn, true);
+      try {
+        await api.login(username, password);
+        this._onAuthSuccess();
+      } catch (err) {
+        errEl.textContent = err.message;
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+
+    document.getElementById('btn-auth-signup').addEventListener('click', async () => {
+      const btn   = document.getElementById('btn-auth-signup');
+      const uname = document.getElementById('auth-username-signup').value.trim();
+      const pw1   = document.getElementById('auth-password-signup').value;
+      const pw2   = document.getElementById('auth-password-signup2').value;
+      const errEl = document.getElementById('auth-error-signup');
+      errEl.textContent = '';
+      if (!uname || !pw1) { errEl.textContent = '모든 항목을 입력해주세요'; return; }
+      if (pw1 !== pw2)    { errEl.textContent = '비밀번호가 일치하지 않습니다'; return; }
+      setLoading(btn, true);
+      try {
+        await api.signup(uname, pw1);
+        this._onAuthSuccess();
+      } catch (err) {
+        errEl.textContent = err.message;
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+
+    // Enter 키 지원
+    document.getElementById('auth-password-login').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-auth-login').click();
+    });
+    document.getElementById('auth-password-signup2').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-auth-signup').click();
+    });
+  },
+
+  /* ── 로그인/회원가입 성공 후 처리 ── */
+  _onAuthSuccess() {
+    document.getElementById('modal-auth').classList.add('hidden');
+    this._initAfterAuth();
+  },
+
+  /* ── DB 세이브 → 로컬 프로필 동기화 (새 기기 복원) ── */
+  async _syncProfilesFromDB() {
+    if (!api.isLoggedIn()) return;
+    try {
+      const dbSaves = await api.listSaves();
+      let changed = false;
+      for (const row of dbSaves) {
+        const exists = this.profiles.some(p => p.name === row.profile_name);
+        if (!exists) {
+          this.profiles.push({
+            id: `profile_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            name: row.profile_name,
+            createdAt: Date.now(),
+            lastPlayedAt: new Date(row.updated_at).getTime(),
+          });
+          changed = true;
+        }
+      }
+      if (changed) {
+        this._saveProfiles();
+        this._renderInitProfileList();
+        document.getElementById('saved-profiles-section').classList.remove('hidden');
+      }
+    } catch (e) {
+      // DB 접근 실패 시 로컬 데이터로 계속 진행
+    }
+  },
+
+  /* ── DB에서 세이브 로드 후 게임 시작 ── */
+  async _loadAndStart(profileId) {
+    if (api.isLoggedIn()) {
+      const profile = this.profiles.find(p => p.id === profileId);
+      const hasLocal = !!localStorage.getItem(`kuTapGame:save:${profileId}`);
+      // 로컬에 없으면 DB에서 가져와 localStorage에 캐싱
+      if (profile && !hasLocal) {
+        try {
+          const row = await api.loadSave(profile.name);
+          if (row?.save_data) {
+            localStorage.setItem(`kuTapGame:save:${profileId}`, JSON.stringify(row.save_data));
+          }
+        } catch (e) { /* DB 없으면 새 게임으로 시작 */ }
+      }
+    }
+    this.startGame(profileId);
   },
 
   /* ── 게임 시작 ── */
@@ -855,6 +988,15 @@ const game = {
     } catch(e) {
       document.getElementById('save-indicator').textContent = '저장 실패';
     }
+    // DB 동기화 (로그인 시, 비동기 fire-and-forget)
+    if (api.isLoggedIn()) {
+      const profile = this.profiles.find(p => p.id === this.currentProfileId);
+      if (profile) {
+        api.upsertSave(profile.name, this.state).catch(err => {
+          console.warn('DB save failed:', err.message);
+        });
+      }
+    }
   },
 
   _loadState(profileId) {
@@ -909,15 +1051,21 @@ const game = {
   },
 
   _deleteProfile(id) {
+    const profile = this.profiles.find(p => p.id === id);
     this.profiles = this.profiles.filter(p => p.id !== id);
     this._saveProfiles();
     localStorage.removeItem(`kuTapGame:save:${id}`);
+    if (api.isLoggedIn() && profile) {
+      api.deleteSave(profile.name).catch(err => {
+        console.warn('DB delete failed:', err.message);
+      });
+    }
   },
 
   _onCreateProfile() {
     // 저장된 프로필이 선택된 경우 → 해당 프로필로 시작
     if (this._selectedInitProfileId) {
-      this.startGame(this._selectedInitProfileId);
+      this._loadAndStart(this._selectedInitProfileId);
       return;
     }
     // 새 프로필 이름이 입력된 경우 → 생성 후 시작
@@ -925,7 +1073,7 @@ const game = {
     const name = input.value.trim();
     if (name.length < 2) { this.showToast('프로필을 선택하거나 닉네임을 입력해주세요', 'warning'); return; }
     const profile = this._createProfile(name);
-    this.startGame(profile.id);
+    this._loadAndStart(profile.id);
   },
 
   _onAddProfile() {
@@ -1180,6 +1328,27 @@ const game = {
 
   _renderProfilePanel() {
     const s = this.state;
+
+    // 계정 정보 렌더링
+    const accountEl = document.getElementById('auth-account-info');
+    if (api.isLoggedIn()) {
+      accountEl.innerHTML = `
+        <div class="auth-account-row">
+          <div>
+            <div class="auth-account-name">@${api.getUser()}</div>
+            <div class="auth-account-label">로그인된 계정</div>
+          </div>
+          <button class="btn-logout" id="btn-logout">로그아웃</button>
+        </div>`;
+      document.getElementById('btn-logout').addEventListener('click', () => {
+        if (!confirm('로그아웃 하시겠습니까?')) return;
+        api.logout();
+        location.reload();
+      });
+    } else {
+      accountEl.innerHTML = '';
+    }
+
     const el = document.getElementById('profile-list-main');
     el.innerHTML = '';
     this.profiles.forEach(profile => {

@@ -11,6 +11,36 @@
 <body>
   <div id="app-root">
 
+    <!-- ── 로그인/회원가입 모달 ── -->
+    <div id="modal-auth" class="modal-overlay hidden">
+      <div class="modal-box profile-select-box">
+        <div class="app-logo">
+          <div class="logo-char"></div>
+          <h1>건덕이 탭게임 <span class="ver">ver2</span></h1>
+          <p class="logo-sub">계정에 로그인하여 게임 진행을 저장하세요</p>
+        </div>
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="auth-tab-login">로그인</button>
+          <button class="auth-tab" id="auth-tab-signup">회원가입</button>
+        </div>
+        <!-- 로그인 폼 -->
+        <div id="auth-form-login" class="auth-form-fields">
+          <input type="text" id="auth-username-login" placeholder="유저네임" autocomplete="username" maxlength="20">
+          <input type="password" id="auth-password-login" placeholder="비밀번호" autocomplete="current-password">
+          <p id="auth-error-login" class="auth-error"></p>
+          <button id="btn-auth-login" class="btn-green">로그인</button>
+        </div>
+        <!-- 회원가입 폼 -->
+        <div id="auth-form-signup" class="auth-form-fields hidden">
+          <input type="text" id="auth-username-signup" placeholder="유저네임 (2~20자, 영문/숫자/한글)" autocomplete="username" maxlength="20">
+          <input type="password" id="auth-password-signup" placeholder="비밀번호 (4자 이상)" autocomplete="new-password">
+          <input type="password" id="auth-password-signup2" placeholder="비밀번호 확인" autocomplete="new-password">
+          <p id="auth-error-signup" class="auth-error"></p>
+          <button id="btn-auth-signup" class="btn-green">회원가입</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── 프로필 선택 모달 (첫 실행) ── -->
     <div id="modal-profile-select" class="modal-overlay active">
       <div class="modal-box profile-select-box">
@@ -198,6 +228,7 @@
         <!-- ── PROFILE 패널 ── -->
         <div id="panel-profile" class="panel">
           <div class="panel-scroll">
+            <div id="auth-account-info"></div>
             <div class="panel-section-title">👤 프로필 관리</div>
             <div id="profile-list-main"></div>
             <div class="new-profile-row">
@@ -299,6 +330,7 @@
 
   </div><!-- end #app-root -->
 
+  <script src="api-client.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

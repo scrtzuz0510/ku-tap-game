@@ -1800,6 +1800,91 @@ input[type="text"]:focus { border-color: var(--ku-green); }
 
 /* ── 유틸 ── */
 .active { display: flex !important; }
+/* ── 로그인/회원가입 모달 ── */
+input[type="password"] {
+  width: 100%;
+  border: 1.5px solid var(--ku-gray2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--ku-dark);
+  outline: none;
+  font-family: inherit;
+  background: var(--ku-white);
+  transition: border-color 0.15s;
+}
+input[type="password"]:focus { border-color: var(--ku-green); }
+
+.auth-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.auth-tab {
+  flex: 1;
+  padding: 9px;
+  border: 1.5px solid var(--ku-gray2);
+  border-radius: var(--radius-sm);
+  background: var(--ku-white);
+  color: var(--ku-gray4);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.auth-tab.active {
+  background: var(--ku-green);
+  border-color: var(--ku-green);
+  color: white;
+  font-weight: 700;
+}
+.auth-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.auth-error {
+  font-size: 12px;
+  color: var(--ku-red);
+  min-height: 16px;
+  margin: 0;
+}
+
+/* ── 프로필 패널 계정 정보 ── */
+.auth-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--ku-green-bg);
+  border: 1.5px solid var(--ku-green);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+.auth-account-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ku-green);
+}
+.auth-account-label {
+  font-size: 11px;
+  color: var(--ku-gray4);
+  margin-top: 2px;
+}
+.btn-logout {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border: 1.5px solid var(--ku-gray3);
+  background: var(--ku-white);
+  color: var(--ku-gray4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-logout:hover { border-color: var(--ku-red); color: var(--ku-red); }
+
 .hidden { display: none !important; }  /* hidden은 항상 마지막에 선언해 !important 충돌 시 우선 */
 
 /* 스크롤바 스타일링 */
