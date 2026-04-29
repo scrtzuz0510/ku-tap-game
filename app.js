@@ -380,6 +380,7 @@ const game = {
 
   /* ── auth 모달 표시 ── */
   _showAuthModal() {
+    document.getElementById('modal-profile-select').classList.add('hidden');
     document.getElementById('modal-auth').classList.remove('hidden');
 
     const tabLogin  = document.getElementById('auth-tab-login');
@@ -453,6 +454,7 @@ const game = {
   /* ── 로그인/회원가입 성공 후 처리 ── */
   _onAuthSuccess() {
     document.getElementById('modal-auth').classList.add('hidden');
+    document.getElementById('modal-profile-select').classList.remove('hidden');
     this._initAfterAuth();
   },
 
@@ -1086,11 +1088,23 @@ const game = {
     this.showToast('프로필이 추가되었습니다', 'success');
   },
 
-  switchProfile(id) {
+  async switchProfile(id) {
     if (id === this.currentProfileId) return;
     this.save();
-    const prevState = this.state;
     this.currentProfileId = id;
+    // DB에서 복원된 프로필은 localStorage가 비어 있을 수 있으므로 로드 시도
+    if (api.isLoggedIn()) {
+      const profile  = this.profiles.find(p => p.id === id);
+      const hasLocal = !!localStorage.getItem(`kuTapGame:save:${id}`);
+      if (profile && !hasLocal) {
+        try {
+          const row = await api.loadSave(profile.name);
+          if (row?.save_data) {
+            localStorage.setItem(`kuTapGame:save:${id}`, JSON.stringify(row.save_data));
+          }
+        } catch (e) { /* DB 없으면 새 게임으로 시작 */ }
+      }
+    }
     this.state = this._loadState(id);
     this._refreshDailyMissions();
     document.getElementById('ku').setAttribute('data-stage', this.state.evolutionLevel);
