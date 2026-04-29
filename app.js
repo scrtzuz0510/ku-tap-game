@@ -311,6 +311,8 @@ const game = {
 
   /* ── 로그인 후 게임 초기화 ── */
   _initAfterAuth() {
+    document.getElementById('modal-profile-select').classList.remove('hidden');
+
     this.profiles = this._loadProfiles();
     this._renderInitProfileList();
 
@@ -380,7 +382,6 @@ const game = {
 
   /* ── auth 모달 표시 ── */
   _showAuthModal() {
-    document.getElementById('modal-profile-select').classList.add('hidden');
     document.getElementById('modal-auth').classList.remove('hidden');
 
     const tabLogin  = document.getElementById('auth-tab-login');
@@ -454,7 +455,6 @@ const game = {
   /* ── 로그인/회원가입 성공 후 처리 ── */
   _onAuthSuccess() {
     document.getElementById('modal-auth').classList.add('hidden');
-    document.getElementById('modal-profile-select').classList.remove('hidden');
     this._initAfterAuth();
   },
 
@@ -472,6 +472,7 @@ const game = {
             name: row.profile_name,
             createdAt: Date.now(),
             lastPlayedAt: new Date(row.updated_at).getTime(),
+            _fromDB: true,
           });
           changed = true;
         }
@@ -491,8 +492,8 @@ const game = {
     if (api.isLoggedIn()) {
       const profile = this.profiles.find(p => p.id === profileId);
       const hasLocal = !!localStorage.getItem(`kuTapGame:save:${profileId}`);
-      // 로컬에 없으면 DB에서 가져와 localStorage에 캐싱
-      if (profile && !hasLocal) {
+      // DB에서 복원된 프로필이고 로컬 캐시가 없을 때만 조회
+      if (profile?._fromDB && !hasLocal) {
         try {
           const row = await api.loadSave(profile.name);
           if (row?.save_data) {
